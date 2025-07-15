@@ -14,6 +14,7 @@ export default function ForgotPin() {
   const [showError, setShowError] = useState(false);
   const [apiError, setApiError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // 👈 loading state
 
   const securityQuestions = [
     "What is your mother's maiden name?",
@@ -47,6 +48,7 @@ export default function ForgotPin() {
       sec_answer: securityAnswer,
     };
 
+    setIsLoading(true); // 👈 start loading
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/forgot-pin`,
@@ -64,6 +66,8 @@ export default function ForgotPin() {
       setApiError(
         err.response?.data?.message || "Something went wrong. Please try again."
       );
+    } finally {
+      setIsLoading(false); // 👈 stop loading
     }
   };
 
@@ -117,9 +121,12 @@ export default function ForgotPin() {
 
         <button
           onClick={handleContinue}
-          className="w-full bg-[#fbbf24] text-[#051d40] py-3 rounded-full font-bold text-sm hover:bg-yellow-400 transition"
+          disabled={isLoading}
+          className={`w-full ${
+            isLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#fbbf24] hover:bg-yellow-400"
+          } text-[#051d40] py-3 rounded-full font-bold text-sm transition`}
         >
-          CONTINUE
+          {isLoading ? "Processing..." : "CONTINUE"}
         </button>
 
         {/* Message Display */}

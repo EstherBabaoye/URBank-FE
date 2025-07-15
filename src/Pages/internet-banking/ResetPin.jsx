@@ -7,6 +7,7 @@ export default function ResetPin() {
   const [confirmPin, setConfirmPin] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // 👈 loading state
   const navigate = useNavigate();
   const token = new URLSearchParams(window.location.search).get("token");
 
@@ -24,6 +25,8 @@ export default function ResetPin() {
       return;
     }
 
+    setIsLoading(true); // 👈 start loading
+
     try {
       await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/reset-pin`, {
         new_pin: newPin,
@@ -36,6 +39,8 @@ export default function ResetPin() {
       }, 1500);
     } catch (err) {
       setError(err.response?.data?.message || "Reset failed. Try again.");
+    } finally {
+      setIsLoading(false); // 👈 stop loading
     }
   };
 
@@ -75,9 +80,14 @@ export default function ResetPin() {
 
         <button
           onClick={handleReset}
-          className="w-full bg-[#fbbf24] text-[#051d40] py-3 rounded-full font-bold text-sm hover:bg-yellow-400 transition"
+          disabled={isLoading}
+          className={`w-full py-3 rounded-full font-bold text-sm transition ${
+            isLoading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-[#fbbf24] text-[#051d40] hover:bg-yellow-400"
+          }`}
         >
-          RESET & LOGIN
+          {isLoading ? "Resetting..." : "RESET & LOGIN"}
         </button>
       </div>
     </section>

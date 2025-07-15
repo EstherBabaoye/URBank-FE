@@ -71,29 +71,50 @@ export default function CardApplication() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (isSubmitting) return; // 👈 prevent double-clicks
+    if (isSubmitting) return;
 
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      setSuccess(false); // hide any prior success
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     setIsSubmitting(true);
+    setSuccess(false);
+    setServerError("");
+
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_BASE_URL}/api/card/apply`,
         form
       );
 
-      // ✅ Only if status is success
       if (res.data?.success) {
         setSuccess(true);
-        setServerError("");
         setErrors({});
-        setForm({ ...initialEmptyFormValues });
+        setServerError("");
+
+        // ✅ reset form
+        setForm({
+          firstName: "",
+          middleName: "",
+          surname: "",
+          email: "",
+          phone: "",
+          cardType: "",
+          subCardType: "",
+          reason: "",
+          otherReason: "",
+          accountNumber: "",
+        });
+
+        // ✅ scroll to top to show success
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         setServerError("Failed to submit. Please try again later.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     } catch (error) {
       console.error("Submission error:", error);
@@ -101,6 +122,7 @@ export default function CardApplication() {
         error.response?.data?.error ||
           "Failed to submit. Please try again later."
       );
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setIsSubmitting(false);
     }
@@ -143,182 +165,194 @@ export default function CardApplication() {
         onSubmit={handleSubmit}
         className="space-y-6 bg-white shadow-xl rounded-xl p-8"
       >
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Account Number
-          </label>
-          <input
-            name="accountNumber"
-            type="text"
-            value={form.accountNumber}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-          />
-          {errors.accountNumber && (
-            <p className="text-red-500 text-sm mt-1">{errors.accountNumber}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">First Name</label>
-          <input
-            name="firstName"
-            value={form.firstName}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-          />
-          {errors.firstName && (
-            <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Middle Name</label>
-          <input
-            name="middleName"
-            value={form.middleName}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Surname</label>
-          <input
-            name="surname"
-            value={form.surname}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-          />
-          {errors.surname && (
-            <p className="text-red-500 text-sm mt-1">{errors.surname}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
-          <input
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Phone Number</label>
-          <input
-            name="phone"
-            type="tel"
-            value={form.phone}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-          />
-          {errors.phone && (
-            <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Card Type</label>
-          <select
-            name="cardType"
-            value={form.cardType}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-          >
-            <option value="">Select a card type</option>
-            <option value="debit">Debit Card</option>
-            <option value="credit">Credit Card</option>
-          </select>
-          {errors.cardType && (
-            <p className="text-red-500 text-sm mt-1">{errors.cardType}</p>
-          )}
-        </div>
-
-        {(form.cardType === "debit" || form.cardType === "credit") && (
+        <fieldset disabled={isSubmitting} className="space-y-6">
           <div>
             <label className="block text-sm font-medium mb-1">
-              {form.cardType === "debit"
-                ? "Debit Card Options"
-                : "Credit Card Options"}
-            </label>
-            <select
-              name="subCardType"
-              value={form.subCardType}
-              onChange={handleChange}
-              className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-            >
-              <option value="">Select an option</option>
-              {(form.cardType === "debit" ? debitOptions : creditOptions).map(
-                (opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                )
-              )}
-            </select>
-            {errors.subCardType && (
-              <p className="text-red-500 text-sm mt-1">{errors.subCardType}</p>
-            )}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Reason for Application
-          </label>
-          <select
-            name="reason"
-            value={form.reason}
-            onChange={handleChange}
-            className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
-          >
-            <option value="">Select a reason</option>
-            <option value="New Application">New Application</option>
-            <option value="Misplaced Card">Misplaced Card</option>
-            <option value="Expired Card">Expired Card</option>
-            <option value="Damaged Card">Damaged Card</option>
-            <option value="Change Card Type">Change Card Type</option>
-            <option value="Other">Other</option>
-          </select>
-          {errors.reason && (
-            <p className="text-red-500 text-sm mt-1">{errors.reason}</p>
-          )}
-        </div>
-
-        {form.reason === "Other" && (
-          <div className="mt-4">
-            <label className="block text-sm font-medium mb-1">
-              Please write out your reason
+              Account Number
             </label>
             <input
-              name="otherReason"
-              value={form.otherReason}
+              name="accountNumber"
+              type="text"
+              value={form.accountNumber}
               onChange={handleChange}
               className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
             />
-            {errors.otherReason && (
-              <p className="text-red-500 text-sm mt-1">{errors.otherReason}</p>
+            {errors.accountNumber && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.accountNumber}
+              </p>
             )}
           </div>
-        )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`w-full py-3 rounded-lg font-semibold transition ${
-            isSubmitting
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-[#051d40] text-white hover:bg-[#03306b]"
-          }`}
-        >
-          {isSubmitting ? "Submitting..." : "Submit Application"}
-        </button>
+          <div>
+            <label className="block text-sm font-medium mb-1">First Name</label>
+            <input
+              name="firstName"
+              value={form.firstName}
+              onChange={handleChange}
+              className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+            />
+            {errors.firstName && (
+              <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Middle Name
+            </label>
+            <input
+              name="middleName"
+              value={form.middleName}
+              onChange={handleChange}
+              className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Surname</label>
+            <input
+              name="surname"
+              value={form.surname}
+              onChange={handleChange}
+              className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+            />
+            {errors.surname && (
+              <p className="text-red-500 text-sm mt-1">{errors.surname}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Phone Number
+            </label>
+            <input
+              name="phone"
+              type="tel"
+              value={form.phone}
+              onChange={handleChange}
+              className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+            />
+            {errors.phone && (
+              <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Card Type</label>
+            <select
+              name="cardType"
+              value={form.cardType}
+              onChange={handleChange}
+              className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+            >
+              <option value="">Select a card type</option>
+              <option value="debit">Debit Card</option>
+              <option value="credit">Credit Card</option>
+            </select>
+            {errors.cardType && (
+              <p className="text-red-500 text-sm mt-1">{errors.cardType}</p>
+            )}
+          </div>
+
+          {(form.cardType === "debit" || form.cardType === "credit") && (
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                {form.cardType === "debit"
+                  ? "Debit Card Options"
+                  : "Credit Card Options"}
+              </label>
+              <select
+                name="subCardType"
+                value={form.subCardType}
+                onChange={handleChange}
+                className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+              >
+                <option value="">Select an option</option>
+                {(form.cardType === "debit" ? debitOptions : creditOptions).map(
+                  (opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  )
+                )}
+              </select>
+              {errors.subCardType && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.subCardType}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Reason for Application
+            </label>
+            <select
+              name="reason"
+              value={form.reason}
+              onChange={handleChange}
+              className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+            >
+              <option value="">Select a reason</option>
+              <option value="New Application">New Application</option>
+              <option value="Misplaced Card">Misplaced Card</option>
+              <option value="Expired Card">Expired Card</option>
+              <option value="Damaged Card">Damaged Card</option>
+              <option value="Change Card Type">Change Card Type</option>
+              <option value="Other">Other</option>
+            </select>
+            {errors.reason && (
+              <p className="text-red-500 text-sm mt-1">{errors.reason}</p>
+            )}
+          </div>
+
+          {form.reason === "Other" && (
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-1">
+                Please write out your reason
+              </label>
+              <input
+                name="otherReason"
+                value={form.otherReason}
+                onChange={handleChange}
+                className="w-full border p-3 rounded-md focus:ring-2 focus:ring-[#051d40]"
+              />
+              {errors.otherReason && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.otherReason}
+                </p>
+              )}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`w-full py-3 rounded-lg font-semibold transition ${
+              isSubmitting
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#051d40] text-white hover:bg-[#03306b]"
+            }`}
+          >
+            {isSubmitting ? "Submitting..." : "Submit Application"}
+          </button>
+        </fieldset>
       </form>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 
@@ -7,24 +7,31 @@ export default function VerifyInternetBanking() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const hasVerified = useRef(false); // ✅ Prevent double trigger in dev
 
   useEffect(() => {
     const token = searchParams.get("token");
 
-    if (!token) {
-      setStatus("error");
-      return;
-    }
+    if (!token || hasVerified.current) return;
+
+    hasVerified.current = true;
 
     const verifyEmail = async () => {
       try {
-        await axios.get(
+        const res = await axios.get(
           `${import.meta.env.VITE_API_BASE_URL}/api/verify-email?token=${token}`
         );
-        setStatus("success");
 
-        // Auto-redirect after 3s
-        setTimeout(() => navigate("/services/internet-banking"), 3000);
+        const msg = res.data?.message?.toLowerCase() || "";
+
+        if (msg.includes("already verified")) {
+          setStatus("success"); // or use "already" if you want a separate message
+        } else if (res.data?.success) {
+          setStatus("success");
+          setTimeout(() => navigate("/services/internet-banking"), 3000);
+        } else {
+          setStatus("error");
+        }
       } catch (error) {
         console.error("Verification failed:", error);
         setStatus("error");
@@ -39,21 +46,36 @@ export default function VerifyInternetBanking() {
       case "verifying":
         return {
           title: "Verifying Email...",
-          message: "Please wait while we verify your email address.",
+          message: (
+            <div className="flex flex-col items-center gap-2">
+              <p>Please wait while we verify your email address.</p>
+              <div className="w-6 h-6 border-4 border-blue-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ),
           color: "text-blue-600",
         };
+
       case "success":
         return {
           title: "✅ Email Verified!",
           message: "Redirecting to login...",
           color: "text-green-600",
         };
+
+      case "already":
+        return {
+          title: "⚠️ Email Already Verified",
+          message: "You may proceed to login.",
+          color: "text-yellow-600",
+        };
+
       case "error":
         return {
           title: "Verification Failed",
           message: "This link is invalid or has expired.",
           color: "text-red-600",
         };
+
       default:
         return {};
     }
@@ -70,7 +92,7 @@ export default function VerifyInternetBanking() {
           className="h-12 mx-auto mb-4"
         />
         <h2 className={`text-xl font-bold mb-2 ${color}`}>{title}</h2>
-        <p className="text-sm">{message}</p>
+        <div className="text-sm">{message}</div>
 
         {status === "error" && (
           <button

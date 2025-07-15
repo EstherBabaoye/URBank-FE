@@ -16,6 +16,7 @@ export default function AccountOpeningForm() {
   }, []);
 
   const formRef = useRef(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -488,6 +489,14 @@ export default function AccountOpeningForm() {
     setErrors({});
   };
 
+  const fieldLabel = (field) => {
+    const labels = {
+      nin: "NIN",
+      bvn: "BVN",
+    };
+    return labels[field] || field;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -539,21 +548,29 @@ export default function AccountOpeningForm() {
         res.status === 200 ||
         res.data?.message?.toLowerCase().includes("success")
       ) {
-        setSuccessMessage("🎉 Your account request has been submitted!");
-        setTimeout(() => {
-          resetForm();
-          setSuccessMessage(""); // Clear after delay
-        }, 5000);
-      }
-
-      setTimeout(() => {
+        // ✅ Immediately clear the form
         resetForm();
-        setSuccessMessage(""); // Clear after delay
-      }, 5000);
+
+        // ✅ Scroll to the top
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        // ✅ Show success message immediately
+        setSuccessMessage(" Your account request has been submitted!");
+        console.log("Success message set!");
+
+        // ✅ Clear success message after 10 seconds
+        setTimeout(() => {
+          setSuccessMessage("");
+        }, 10000);
+      }
     } catch (error) {
-      if (error.response?.status === 422) {
-        const serverErrors = error.response.data.errors;
-        const flatErrors = normalizeErrors(serverErrors);
+      console.error("Submission error:", error);
+
+      const responseData = error.response?.data;
+
+      // ✅ 1. Laravel-style field errors — even if status is 400
+      if (responseData?.errors) {
+        const flatErrors = normalizeErrors(responseData.errors);
         setErrors(flatErrors);
 
         const firstField = Object.keys(flatErrors)[0];
@@ -562,10 +579,53 @@ export default function AccountOpeningForm() {
           ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
           ref.current.focus();
         }
-      } else {
-        console.error("Unexpected error:", error);
+
+        setIsLoading(false); // ✅ stops button spinner
+        return; // ✅ Stop here — field errors handled
       }
-    } finally {
+
+      // ✅ 2. SQL Duplicate Entry (non-field error, scroll to field if possible)
+      if (
+        responseData?.error?.includes("Duplicate entry") &&
+        responseData?.error?.includes("_unique")
+      ) {
+        const match = responseData.error.match(/for key '.*?_(.*?)_unique'/);
+        const field = match?.[1];
+
+        if (field) {
+          setErrors((prev) => ({
+            ...prev,
+            [field]: `${fieldLabel(
+              field
+            )} is already linked to a registered user.`,
+          }));
+
+          const ref = inputRefs[field];
+          if (ref?.current) {
+            ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+            ref.current.focus();
+          }
+
+          setIsLoading(false); // ✅ ensure spinner stops
+          return;
+        } else {
+          setErrorMessage(
+            "A duplicate entry was detected, but the field could not be identified."
+          );
+        }
+
+        // ✅ 3. Laravel-level error message
+      } else if (responseData?.message) {
+        setErrorMessage(responseData.message);
+
+        // ✅ 4. Unknown fallback error
+      } else {
+        setErrorMessage("An unexpected error occurred. Please try again.");
+      }
+
+      // ✅ Scroll to top and reset loading for all general errors
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => setErrorMessage(""), 10000);
       setIsLoading(false);
     }
   };
@@ -639,19 +699,25 @@ export default function AccountOpeningForm() {
 
   return (
     <>
-      {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mt-4">
-          {successMessage}
-        </div>
-      )}
       <form
         onSubmit={handleSubmit}
         ref={formRef}
         className="max-w-6xl mx-auto mb-24 mt-24 px-4 pb-4 md:pt-4 md:px-8 md:pb-8 space-y-10 bg-white print:bg-white print:p-6 shadow-lg rounded-xl text-sm print:text-black"
       >
-        <h2 className="text-3xl pt-16 font-bold text-center">
+        <h2 className="text-3xl pt-8 font-bold text-center">
           URBank Account Opening Form
         </h2>
+
+        {successMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mt-4">
+            {successMessage}
+          </div>
+        )}
+        {errorMessage && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mt-4">
+            {errorMessage}
+          </div>
+        )}
 
         {/* PERSONAL INFORMATION */}
         <section>
@@ -1829,6 +1895,11 @@ export default function AccountOpeningForm() {
                   />
                   Mobile Wallet
                 </label>
+                {errors.electronicBanking && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.electronicBanking}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1858,6 +1929,11 @@ export default function AccountOpeningForm() {
                   />
                   SMS Alerts
                 </label>
+                {errors.alertPreference && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.alertPreference}
+                  </p>
+                )}
               </div>
             </div>
           </div>
