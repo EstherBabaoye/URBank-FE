@@ -28,7 +28,7 @@ export default function UserProfile() {
         setProfile(res.data);
 
         if (res.data.passportPhoto) {
-          setPhoto(`${baseURL}/uploads/${res.data.passportPhoto}`);
+          setPhoto(res.data.passportPhoto); // already full URL from backend
         } else {
           setPhoto("/default-avatar.jpg");
         }

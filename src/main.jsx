@@ -8,7 +8,7 @@ import { AuthProvider } from "./Components/AuthContext";
 import axios from "axios";
 
 axios.defaults.headers.common["Accept"] = "application/json";
-axios.defaults.baseURL = "http://urbank-be.test";
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL;
 axios.defaults.withCredentials = false;
 
 createRoot(document.getElementById('root')).render(
